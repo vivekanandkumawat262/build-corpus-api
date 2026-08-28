@@ -245,99 +245,63 @@ REQUIRED_ROW_KEYS = {
     "text",
 }
 
-
 def parse_jsonl(content):
-    """
-    Returns:
-
-        rows
-        jsonl_invalid
-        schema_invalid
-
-    """
-
     rows = []
 
-    jsonl_invalid = False
-    schema_invalid = False
-
-    lines = content.splitlines()
-
-    # Blank lines ignored
     nonblank_lines = [
-        line for line in lines
+        line
+        for line in content.splitlines()
         if line.strip() != ""
     ]
 
-    # Empty file is schema invalid
+    # Empty file
     if not nonblank_lines:
         return [], False, True
 
     for line in nonblank_lines:
-
         try:
             obj = json.loads(line)
         except Exception:
-            jsonl_invalid = True
-            continue
+            return [], True, False
 
-        # Must be object
         if not isinstance(obj, dict):
-            schema_invalid = True
-            continue
+            return [], False, True
 
-        # Exactly required keys
         if set(obj.keys()) != REQUIRED_ROW_KEYS:
-            schema_invalid = True
-            continue
+            return [], False, True
 
-        # Four text fields
         if not isinstance(obj["id"], str):
-            schema_invalid = True
-            continue
+            return [], False, True
 
         if not isinstance(obj["entity"], str):
-            schema_invalid = True
-            continue
+            return [], False, True
 
         if not isinstance(obj["eventTime"], str):
-            schema_invalid = True
-            continue
+            return [], False, True
 
         if not isinstance(obj["text"], str):
-            schema_invalid = True
-            continue
+            return [], False, True
 
-        # Revision: non-negative safe integer
         revision = obj["revision"]
 
         if isinstance(revision, bool):
-            schema_invalid = True
-            continue
+            return [], False, True
 
         if not isinstance(revision, int):
-            schema_invalid = True
-            continue
+            return [], False, True
 
         if revision < 0:
-            schema_invalid = True
-            continue
+            return [], False, True
 
-        # JavaScript safe integer
         if revision > 9007199254740991:
-            schema_invalid = True
-            continue
+            return [], False, True
 
-        # eventTime must be valid
         if parse_timestamp(obj["eventTime"]) is None:
-            schema_invalid = True
-            continue
+            return [], False, True
 
         rows.append(obj)
 
-    return rows, jsonl_invalid, schema_invalid
-
-
+    return rows, False, False
 # ============================================================
 # WORD SET FOR CONTAMINATION
 # ============================================================
